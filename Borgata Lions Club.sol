@@ -1613,7 +1613,7 @@ contract BorgataLionsClub is ERC721A, Ownable, ReentrancyGuard {
         return baseTokenURI;
     }
 
-    function _startTokenId() internal view virtual override returns (uint256) {
+    function _startTokenId() internal pure virtual override returns (uint256) {
         return 1;
     }
 
@@ -1641,7 +1641,7 @@ contract BorgataLionsClub is ERC721A, Ownable, ReentrancyGuard {
             ),
             "Address not eligible for presale mint"
         );
-        require(_count <= 10, "Maximum 10 NFTs can be minted per transaction");
+        require(_count <= 5, "Maximum 5 NFTs can be minted per transaction");
         uint256 amountRequired = presalePrice * _count;
         if (_count == 3) {
             amountRequired -= ((amountRequired * 0.1 ether) / 1e18);

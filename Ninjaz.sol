@@ -1178,38 +1178,21 @@ contract ERC721 is Context, ERC165, IERC721, IERC721Metadata {
     ) internal virtual {}
 }
 
-pragma solidity 0.8.11;
+pragma solidity ^0.8.0;
 
-interface ISlyGuise {
-    function balanceOf(address owner) external view returns (uint256 balance);
-}
-
-pragma solidity 0.8.11;
-
-/// @author Hammad Ghazi
-contract FreaksUniversity is ERC721, Ownable {
-    ISlyGuise public constant slyGuise =
-        ISlyGuise(0xCefb4EeE91a3ce1F3843F79450b13CfaFd09f749);
-
-    bool public saleOpen;
-
-    uint256 public constant MAX_SUPPLY = 500;
+contract NINJAZ is ERC721, Ownable {
+    uint256 public constant MAX_SUPPLY = 100;
     uint256 private mintCount;
 
-    uint256 constant PRICE = 0.25 ether;
-
-    // Discounted price if you own a $GUISE NFT
-    uint256 constant discountPrice1 = 0.21 ether; // If you are minting 1 NFT in a single tx
-    uint256 constant discountPrice2 = 0.4 ether; // If you are minting 2 NFT in a single tx
-    uint256 constant discountPrice3 = 0.65 ether; // If you are minting 3 NFT in a single tx
-
+    uint256 public constant PRICE = 0.1 ether;
     string baseTokenURI;
+    bool public saleOpen;
 
     mapping(address => uint256) public nftMinted;
 
     event Minted(uint256 totalMinted);
 
-    constructor(string memory baseURI) ERC721("Freaks University", "Freaks") {
+    constructor(string memory baseURI) ERC721("NINJAZ", "NINJAZ") {
         setBaseURI(baseURI);
     }
 
@@ -1226,56 +1209,42 @@ contract FreaksUniversity is ERC721, Ownable {
     }
 
     function withdraw() external onlyOwner {
-        (bool success, ) = msg.sender.call{value: address(this).balance}("");
+        (bool success, ) = payable(msg.sender).call{
+            value: address(this).balance
+        }("");
         require(success, "Transfer failed.");
     }
 
-    function mint(uint256 _count) external payable {
+    function reserveNFTs(uint256 _count) external onlyOwner {
         uint256 supply = totalSupply();
         require(supply + _count <= MAX_SUPPLY, "Exceeds maximum supply");
-
-        if (msg.sender != owner()) {
-            require(saleOpen, "Sale is not open yet");
-            require(
-                nftMinted[msg.sender] + _count <= 3,
-                "Maximum 3 NFTs can be minted per address"
-            );
-            uint256 price = getPrice(msg.sender, _count);
-            require(
-                msg.value >= price,
-                "Ether sent with this transaction is not correct"
-            );
-
-            nftMinted[msg.sender] += _count;
-        }
-
         mintCount += _count;
-
-        for (uint256 i = 0; i < _count; i++) {
+        for (uint256 i; i < _count; i++) {
             _safeMint(msg.sender, ++supply);
             emit Minted(supply);
         }
     }
 
-    function getPrice(address _addr, uint256 _count)
-        public
-        view
-        returns (uint256)
-    {
+    function mint(uint256 _count) external payable {
+        require(_count > 0 && _count < 3, "Invalid count input");
         require(
-            _count != 0 && _count <= 3,
-            "Min 0 and Max 3 NFTs can be minted"
+            nftMinted[msg.sender] + _count <= 2,
+            "Maximum 2 NFTs can be minted per address"
         );
-        if (slyGuise.balanceOf(_addr) > 0) {
-            if (_count == 1) {
-                return discountPrice1;
-            } else if (_count == 2) {
-                return discountPrice2;
-            } else {
-                return discountPrice3;
-            }
-        } else {
-            return PRICE * _count;
+        uint256 supply = totalSupply();
+        require(supply + _count <= MAX_SUPPLY, "Exceeds maximum supply");
+
+        require(
+            msg.value >= PRICE * _count,
+            "Ether sent with this transaction is not correct"
+        );
+
+        nftMinted[msg.sender] += _count;
+        mintCount += _count;
+
+        for (uint256 i; i < _count; i++) {
+            _safeMint(msg.sender, ++supply);
+            emit Minted(supply);
         }
     }
 

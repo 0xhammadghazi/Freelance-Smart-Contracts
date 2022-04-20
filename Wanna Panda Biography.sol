@@ -1184,29 +1184,28 @@ interface IPanda {
 
 pragma solidity 0.8.11;
 
-contract ComicPanda is ERC721, Ownable {
+contract WannaPandaBiography is ERC721, Ownable {
     uint256 public constant MAX_SUPPLY = 10000;
-    uint256 private mintCount = 0;
+    uint256 private mintCount;
 
     string baseTokenURI;
 
     IPanda public immutable Panda;
-    bool public claimOpen = false;
+    bool public claimOpen;
 
     event Minted(address Claimer, uint256 totalMinted);
 
-    constructor(address pandaContract, string memory baseURI)
-        ERC721("Comic Panda", "Comic Panda")
+    constructor(address pandaContract)
+        ERC721("Wanna Panda Biography", "Wanna Panda Biography")
     {
         Panda = IPanda(pandaContract);
-        setBaseURI(baseURI);
     }
 
     function totalSupply() public view returns (uint256) {
         return mintCount;
     }
 
-    function setBaseURI(string memory baseURI) public onlyOwner {
+    function setBaseURI(string calldata baseURI) external onlyOwner {
         baseTokenURI = baseURI;
     }
 
@@ -1219,12 +1218,12 @@ contract ComicPanda is ERC721, Ownable {
 
         require(
             supply + 1 <= MAX_SUPPLY,
-            "Exceeds maximum supply of Comic Panda"
+            "Exceeds maximum supply of Wanna Panda Biography"
         );
 
         require(
             claimOpen,
-            "Claiming of Comic Panda's is not turned off at the moment"
+            "Claiming of Wanna Panda Biography NFTs is turned off at the moment"
         );
 
         require(
@@ -1232,7 +1231,7 @@ contract ComicPanda is ERC721, Ownable {
             "You can not claim this token id"
         );
 
-        mintCount += 1;
+        mintCount ++;
 
         _safeMint(msg.sender, tokenId);
         emit Minted(msg.sender, tokenId);
