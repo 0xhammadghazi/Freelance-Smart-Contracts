@@ -1,0 +1,19 @@
+version: '3.9'
+
+services:
+  hardhat:
+    container_name: payment_splitter_event_listener
+    build:
+      context: .
+      cache_from:
+        - payment_splitter:latest
+    image: payment_splitter:latest
+    command: npm run payment-event-listener
+    restart: always
+    environment:
+      - RINKEBY_URL
+      - PRIVATE_KEY
+      - ETHERSCAN_API_KEY
+      - COIN_MARKET_CAP_API_KEY
+      - PAYMENT_SPLITTER_ADDRESS
+      - DEFAULT_NETWORK

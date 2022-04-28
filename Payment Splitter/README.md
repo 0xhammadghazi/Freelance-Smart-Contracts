@@ -2,9 +2,31 @@
 
 The contract is well commented; please refer to it as docs, and if there is any question or issues, feel free to open one.  
 
-Test coverage:  
+## Deploy
+To deploy the contract simply run the following command:
+```bash
+npm run deploy
+```
+You can set the defualt network and `PRIVATE_KEY` in the `.env` file. check [.env.example](.env.example) to see the template.  
+For developing purpose, `mainnet` is not in the [hardhat.config.ts](hardhat.config.ts), add it manually if you want to deploy directly to the `mainnet`.
 
-[coverage.zip](https://github.com/Rtility/payment-splitter/files/8546860/coverage.zip)  
+## Event Listener
+Set the contract address on .env file and run the following command:
+```bash
+npm run payment-event-listener
+```
 
+## Event Listener in Docker
+To start event listener in docker, run the following command:
+```bash
+docker-compose up -d --build
+```
+Don't forget to set the environment variables on .env file.  
 
-![image](https://user-images.githubusercontent.com/39927312/164893408-56dbd644-9e89-454d-950d-f6ee55c01cc6.png)
+## Test coverage:  
+
+File                  |  % Stmts | % Branch |  % Funcs |  % Lines |Uncovered Lines |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+ contracts/           |      100 |       95 |      100 |      100 |                |
+  PaymentSplitter.sol |      100 |       95 |      100 |      100 |                |
+All files             |      100 |       95 |      100 |      100 |                |
