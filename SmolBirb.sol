@@ -1680,8 +1680,8 @@ contract SmolBirb is ERC721AQueryable, Ownable {
 
     uint256 public constant MAX_SUPPLY = 6969;
 
-    uint256 public presalePrice = 0.05 ether;
-    uint256 public publicPrice = 0.05 ether;
+    uint256 public presalePrice = 0.04 ether;
+    uint256 public publicPrice = 0.06 ether;
 
     bytes32 public merkleRoot;
 

@@ -1184,7 +1184,7 @@ contract NINJAZ is ERC721, Ownable {
     uint256 public constant MAX_SUPPLY = 100;
     uint256 private mintCount;
 
-    uint256 public constant PRICE = 0.1 ether;
+    uint256 public constant PRICE = 0.05 ether;
     string baseTokenURI;
     bool public saleOpen;
 

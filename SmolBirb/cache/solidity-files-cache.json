@@ -1,0 +1,136 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "D:\\Smart Contracts\\SmolBirb\\contracts\\ArbitrumBridge.sol": {
+      "lastModificationDate": 1652196376896,
+      "contentHash": "4798a901817a4123d9f2187044d38bd5",
+      "sourceName": "contracts/ArbitrumBridge.sol",
+      "solcConfig": {
+        "version": "0.8.13",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [],
+      "artifacts": []
+    },
+    "D:\\Smart Contracts\\SmolBirb\\contracts\\EthBridge.sol": {
+      "lastModificationDate": 1652196379308,
+      "contentHash": "bfba3dcc82c6ad23f95a7f53769fd717",
+      "sourceName": "contracts/EthBridge.sol",
+      "solcConfig": {
+        "version": "0.8.13",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "0.8.13",
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "EthBridge",
+        "IERC721Receiver",
+        "ISmolBirb"
+      ]
+    },
+    "D:\\Smart Contracts\\SmolBirb\\contracts\\SmolBirb.sol": {
+      "lastModificationDate": 1652033223593,
+      "contentHash": "ee3f2093fa11fdd663a09e79709ec82a",
+      "sourceName": "contracts/SmolBirb.sol",
+      "solcConfig": {
+        "version": "0.8.13",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [],
+      "artifacts": []
+    },
+    "D:\\Smart Contracts\\SmolBirb\\contracts\\SmolBirbArb.sol": {
+      "lastModificationDate": 1652036315127,
+      "contentHash": "2358612c6d68bc46df70a680495b79ed",
+      "sourceName": "contracts/SmolBirbArb.sol",
+      "solcConfig": {
+        "version": "0.8.13",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [],
+      "artifacts": []
+    }
+  }
+}
