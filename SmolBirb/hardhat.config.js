@@ -2,6 +2,7 @@ require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-etherscan");
 require("hardhat-gas-reporter");
 require("solidity-coverage");
+require("./tasks/deploy");
 
 module.exports = {
   solidity: {
@@ -28,9 +29,9 @@ module.exports = {
     },
   },
   etherscan: {
-    apiKey: "99E6GR5JSACE74DM9F1FD5QGDY27S1V8JW",
+    apiKey: {
+      rinkeby: "99E6GR5JSACE74DM9F1FD5QGDY27S1V8JW",
+      arbitrumTestnet: "4UZ8YKDDJP1UZ69DKEM7HGI9DITIF83ZAZ",
+    },
   },
 };
-
-//99E6GR5JSACE74DM9F1FD5QGDY27S1V8JW
-// arb: 4UZ8YKDDJP1UZ69DKEM7HGI9DITIF83ZAZ

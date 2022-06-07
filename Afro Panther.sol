@@ -2,7 +2,7 @@
 
 // File: @openzeppelin/contracts/utils/cryptography/MerkleProof.sol
 
-// OpenZeppelin Contracts (last updated v4.5.0) (utils/cryptography/MerkleProof.sol)
+// OpenZeppelin Contracts v4.4.1 (utils/cryptography/MerkleProof.sol)
 
 pragma solidity ^0.8.0;
 
@@ -48,25 +48,17 @@ library MerkleProof {
             bytes32 proofElement = proof[i];
             if (computedHash <= proofElement) {
                 // Hash(current computed hash + current element of the proof)
-                computedHash = _efficientHash(computedHash, proofElement);
+                computedHash = keccak256(
+                    abi.encodePacked(computedHash, proofElement)
+                );
             } else {
                 // Hash(current element of the proof + current computed hash)
-                computedHash = _efficientHash(proofElement, computedHash);
+                computedHash = keccak256(
+                    abi.encodePacked(proofElement, computedHash)
+                );
             }
         }
         return computedHash;
-    }
-
-    function _efficientHash(bytes32 a, bytes32 b)
-        private
-        pure
-        returns (bytes32 value)
-    {
-        assembly {
-            mstore(0x00, a)
-            mstore(0x20, b)
-            value := keccak256(0x00, 0x40)
-        }
     }
 }
 
@@ -253,9 +245,9 @@ abstract contract Ownable is Context {
 
 // File: @openzeppelin/contracts/utils/Address.sol
 
-// OpenZeppelin Contracts (last updated v4.5.0) (utils/Address.sol)
+// OpenZeppelin Contracts v4.4.1 (utils/Address.sol)
 
-pragma solidity ^0.8.1;
+pragma solidity ^0.8.0;
 
 /**
  * @dev Collection of functions related to the address type
@@ -277,22 +269,17 @@ library Address {
      *  - an address where a contract will be created
      *  - an address where a contract lived, but was destroyed
      * ====
-     *
-     * [IMPORTANT]
-     * ====
-     * You shouldn't rely on `isContract` to protect against flash loan attacks!
-     *
-     * Preventing calls from contracts is highly discouraged. It breaks composability, breaks support for smart wallets
-     * like Gnosis Safe, and does not provide security since it can be circumvented by calling from a contract
-     * constructor.
-     * ====
      */
     function isContract(address account) internal view returns (bool) {
-        // This method relies on extcodesize/address.code.length, which returns 0
-        // for contracts in construction, since the code is only stored at the end
-        // of the constructor execution.
+        // This method relies on extcodesize, which returns 0 for contracts in
+        // construction, since the code is only stored at the end of the
+        // constructor execution.
 
-        return account.code.length > 0;
+        uint256 size;
+        assembly {
+            size := extcodesize(account)
+        }
+        return size > 0;
     }
 
     /**
@@ -795,7 +782,7 @@ interface IERC721Metadata is IERC721 {
 
 // Creator: Chiru Labs
 
-pragma solidity 0.8.13;
+pragma solidity ^0.8.4;
 
 error ApprovalCallerNotOwnerNorApproved();
 error ApprovalQueryForNonexistentToken();
@@ -1465,256 +1452,33 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
     ) internal virtual {}
 }
 
-// File: erc721a/contracts/extensions/ERC721AQueryable.sol
+// File: contracts/AfroPanther.sol
 
-// Creator: Chiru Labs
+pragma solidity 0.8.11;
 
-pragma solidity ^0.8.4;
+/// @author Hammad Ghazi
+contract AfroPanther is ERC721A, Ownable {
+    string baseTokenURI;
 
-error InvalidQueryRange();
+    bool public isSaleOpen;
 
-/**
- * @title ERC721A Queryable
- * @dev ERC721A subclass with convenience query functions.
- */
-abstract contract ERC721AQueryable is ERC721A {
-    /**
-     * @dev Returns the `TokenOwnership` struct at `tokenId` without reverting.
-     *
-     * If the `tokenId` is out of bounds:
-     *   - `addr` = `address(0)`
-     *   - `startTimestamp` = `0`
-     *   - `burned` = `false`
-     *
-     * If the `tokenId` is burned:
-     *   - `addr` = `<Address of owner before token was burned>`
-     *   - `startTimestamp` = `<Timestamp when token was burned>`
-     *   - `burned = `true`
-     *
-     * Otherwise:
-     *   - `addr` = `<Address of owner>`
-     *   - `startTimestamp` = `<Timestamp of start of ownership>`
-     *   - `burned = `false`
-     */
-    function explicitOwnershipOf(uint256 tokenId)
-        public
-        view
-        returns (TokenOwnership memory)
-    {
-        TokenOwnership memory ownership;
-        if (tokenId < _startTokenId() || tokenId >= _currentIndex) {
-            return ownership;
-        }
-        ownership = _ownerships[tokenId];
-        if (ownership.burned) {
-            return ownership;
-        }
-        return _ownershipOf(tokenId);
-    }
+    uint256 public constant MAX_SUPPLY = 10000;
 
-    /**
-     * @dev Returns an array of `TokenOwnership` structs at `tokenIds` in order.
-     * See {ERC721AQueryable-explicitOwnershipOf}
-     */
-    function explicitOwnershipsOf(uint256[] memory tokenIds)
-        external
-        view
-        returns (TokenOwnership[] memory)
-    {
-        unchecked {
-            uint256 tokenIdsLength = tokenIds.length;
-            TokenOwnership[] memory ownerships = new TokenOwnership[](
-                tokenIdsLength
-            );
-            for (uint256 i; i != tokenIdsLength; ++i) {
-                ownerships[i] = explicitOwnershipOf(tokenIds[i]);
-            }
-            return ownerships;
-        }
-    }
+    uint256 public publicPrice = 6 ether;
 
-    /**
-     * @dev Returns an array of token IDs owned by `owner`,
-     * in the range [`start`, `stop`)
-     * (i.e. `start <= tokenId < stop`).
-     *
-     * This function allows for tokens to be queried if the collection
-     * grows too big for a single call of {ERC721AQueryable-tokensOfOwner}.
-     *
-     * Requirements:
-     *
-     * - `start` < `stop`
-     */
-    function tokensOfOwnerIn(
-        address owner,
-        uint256 start,
-        uint256 stop
-    ) external view returns (uint256[] memory) {
-        unchecked {
-            if (start >= stop) revert InvalidQueryRange();
-            uint256 tokenIdsIdx;
-            uint256 stopLimit = _currentIndex;
-            // Set `start = max(start, _startTokenId())`.
-            if (start < _startTokenId()) {
-                start = _startTokenId();
-            }
-            // Set `stop = min(stop, _currentIndex)`.
-            if (stop > stopLimit) {
-                stop = stopLimit;
-            }
-            uint256 tokenIdsMaxLength = balanceOf(owner);
-            // Set `tokenIdsMaxLength = min(balanceOf(owner), stop - start)`,
-            // to cater for cases where `balanceOf(owner)` is too big.
-            if (start < stop) {
-                uint256 rangeLength = stop - start;
-                if (rangeLength < tokenIdsMaxLength) {
-                    tokenIdsMaxLength = rangeLength;
-                }
-            } else {
-                tokenIdsMaxLength = 0;
-            }
-            uint256[] memory tokenIds = new uint256[](tokenIdsMaxLength);
-            if (tokenIdsMaxLength == 0) {
-                return tokenIds;
-            }
-            // We need to call `explicitOwnershipOf(start)`,
-            // because the slot at `start` may not be initialized.
-            TokenOwnership memory ownership = explicitOwnershipOf(start);
-            address currOwnershipAddr;
-            // If the starting slot exists (i.e. not burned), initialize `currOwnershipAddr`.
-            // `ownership.address` will not be zero, as `start` is clamped to the valid token ID range.
-            if (!ownership.burned) {
-                currOwnershipAddr = ownership.addr;
-            }
-            for (
-                uint256 i = start;
-                i != stop && tokenIdsIdx != tokenIdsMaxLength;
-                ++i
-            ) {
-                ownership = _ownerships[i];
-                if (ownership.burned) {
-                    continue;
-                }
-                if (ownership.addr != address(0)) {
-                    currOwnershipAddr = ownership.addr;
-                }
-                if (currOwnershipAddr == owner) {
-                    tokenIds[tokenIdsIdx++] = i;
-                }
-            }
-            // Downsize the array to fit.
-            assembly {
-                mstore(tokenIds, tokenIdsIdx)
-            }
-            return tokenIds;
-        }
-    }
-
-    /**
-     * @dev Returns an array of token IDs owned by `owner`.
-     *
-     * This function scans the ownership mapping and is O(totalSupply) in complexity.
-     * It is meant to be called off-chain.
-     *
-     * See {ERC721AQueryable-tokensOfOwnerIn} for splitting the scan into
-     * multiple smaller scans if the collection is large enough to cause
-     * an out-of-gas error (10K pfp collections should be fine).
-     */
-    function tokensOfOwner(address owner)
-        external
-        view
-        returns (uint256[] memory)
-    {
-        unchecked {
-            uint256 tokenIdsIdx;
-            address currOwnershipAddr;
-            uint256 tokenIdsLength = balanceOf(owner);
-            uint256[] memory tokenIds = new uint256[](tokenIdsLength);
-            TokenOwnership memory ownership;
-            for (
-                uint256 i = _startTokenId();
-                tokenIdsIdx != tokenIdsLength;
-                ++i
-            ) {
-                ownership = _ownerships[i];
-                if (ownership.burned) {
-                    continue;
-                }
-                if (ownership.addr != address(0)) {
-                    currOwnershipAddr = ownership.addr;
-                }
-                if (currOwnershipAddr == owner) {
-                    tokenIds[tokenIdsIdx++] = i;
-                }
-            }
-            return tokenIds;
-        }
-    }
-}
-
-// File: contracts/SmolBirb.sol
-
-pragma solidity ^0.8.4;
-
-error ExceedsMaximumSupply();
-error TransferFailed();
-error CallerIsContract();
-error PresaleNotStarted();
-error AddressNotEligibleForPresaleMint();
-error IncorrectEtherSent();
-error PublicSaleNotStarted();
-error TransactionExceedsMaxNFTsAllowed();
-
-contract SmolBirb is ERC721AQueryable, Ownable {
-    using MerkleProof for bytes32[];
-
-    enum SALE_STATUS {
-        OFF,
-        WL,
-        PUBLIC
-    }
-
-    SALE_STATUS public saleStatus;
-
-    string private baseTokenURI;
-
-    uint256 public constant MAX_SUPPLY = 6969;
-
-    uint256 public presalePrice = 0.04 ether;
-    uint256 public publicPrice = 0.06 ether;
-
-    bytes32 public merkleRoot;
-
-    // To store NFTs a particular address has minted
-    mapping(address => uint256) public mintCounts;
-
-    constructor(string memory baseURI) ERC721A("SmolBirb", "BIRB") {
-        baseTokenURI = baseURI;
+    constructor(string memory baseURI) ERC721A("Afro Panther", "AFPT") {
+        setBaseURI(baseURI);
     }
 
     modifier soldOut(uint256 _count) {
-        if (_totalMinted() + _count > MAX_SUPPLY) revert ExceedsMaximumSupply();
+        require(
+            totalSupply() + _count <= MAX_SUPPLY,
+            "Transaction will exceed maximum available supply of Afro Panther"
+        );
         _;
     }
 
     // Admin only functions
-
-    // To update sale status
-    function setSaleStatus(SALE_STATUS _status) external onlyOwner {
-        saleStatus = _status;
-    }
-
-    function setMerkleRoot(bytes32 _merkleRoot) external onlyOwner {
-        merkleRoot = _merkleRoot;
-    }
-
-    function setBaseURI(string calldata baseURI) external onlyOwner {
-        baseTokenURI = baseURI;
-    }
-
-    function changePresalePrice(uint256 _presalePrice) external onlyOwner {
-        presalePrice = _presalePrice;
-    }
 
     function changePublicPrice(uint256 _publicPrice) external onlyOwner {
         publicPrice = _publicPrice;
@@ -1722,11 +1486,15 @@ contract SmolBirb is ERC721AQueryable, Ownable {
 
     function withdraw() external onlyOwner {
         (bool success, ) = msg.sender.call{value: address(this).balance}("");
-        if (!success) revert TransferFailed();
+        require(success, "Transfer failed.");
     }
 
-    // Set some SmolBirb aside
-    function reserveSmolBirb(uint256 _count)
+    function flipSaleStatus() external onlyOwner {
+        isSaleOpen = !isSaleOpen;
+    }
+
+    // Set some Afro Panther
+    function reserveAfroPanther(uint256 _count)
         external
         onlyOwner
         soldOut(_count)
@@ -1734,18 +1502,19 @@ contract SmolBirb is ERC721AQueryable, Ownable {
         mint(msg.sender, _count);
     }
 
-    function airdrop(address[] calldata _addresses, uint256 _count)
+    function airdrop(address[] memory _addresses, uint256 _count)
         external
         onlyOwner
         soldOut(_count * _addresses.length)
     {
-        uint256 stop = _addresses.length;
-        for (uint256 i; i != stop; ) {
-            _mint(_addresses[i], _count, "", false);
-            unchecked {
-                i++;
-            }
+        require(_addresses.length > 0, "No address found for airdrop");
+        for (uint256 i; i < _addresses.length; i++) {
+            mint(_addresses[i], _count);
         }
+    }
+
+    function setBaseURI(string memory baseURI) public onlyOwner {
+        baseTokenURI = baseURI;
     }
 
     // Getter functions
@@ -1758,44 +1527,19 @@ contract SmolBirb is ERC721AQueryable, Ownable {
         return 1;
     }
 
-    //Mint functions
-
-    function presaleMint(bytes32[] calldata _proof)
-        external
-        payable
-        soldOut(1)
-    {
-        SALE_STATUS saleState = saleStatus;
-        if (saleState == SALE_STATUS.OFF || saleState == SALE_STATUS.PUBLIC)
-            revert PresaleNotStarted();
-        if (
-            !MerkleProof.verify(
-                _proof,
-                merkleRoot,
-                keccak256(abi.encodePacked(msg.sender))
-            )
-        ) revert AddressNotEligibleForPresaleMint();
-        if (msg.value < presalePrice) revert IncorrectEtherSent();
-        if (mintCounts[msg.sender] + 1 > 1)
-            revert TransactionExceedsMaxNFTsAllowed();
-        mintCounts[msg.sender]++;
-
-        mint(msg.sender, 1);
-    }
-
     // Public mint
 
     function publicMint(uint256 _count) external payable soldOut(_count) {
-        if (saleStatus != SALE_STATUS.PUBLIC) revert PublicSaleNotStarted();
-        if (msg.value < publicPrice * _count) revert IncorrectEtherSent();
-        if (mintCounts[msg.sender] + _count > 5)
-            revert TransactionExceedsMaxNFTsAllowed();
-        mintCounts[msg.sender] += _count;
+        require(isSaleOpen, "Mint is not live yet");
+        require(_count <= 5, "Maximum 5 NFTs can be minted per transaction");
+        require(
+            msg.value >= publicPrice * _count,
+            "Incorrect ether sent with this transaction"
+        );
         mint(msg.sender, _count);
     }
 
     function mint(address _addr, uint256 quantity) private {
-        if (tx.origin != msg.sender) revert CallerIsContract();
-        _mint(_addr, quantity, "", false);
+        _safeMint(_addr, quantity);
     }
 }
