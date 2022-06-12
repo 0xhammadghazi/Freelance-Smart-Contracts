@@ -33,7 +33,7 @@ contract ERC721Namable is ERC721Enumerable {
 
     function changeBio(uint256 _tokenId, string memory _bio) public virtual {
         address owner = ownerOf(_tokenId);
-        require(_msgSender() == owner, "ERC721: caller is not the owner");
+        require(msg.sender == owner, "ERC721: caller is not the owner");
 
         bio[_tokenId] = _bio;
         emit BioChange(_tokenId, _bio);
@@ -44,7 +44,7 @@ contract ERC721Namable is ERC721Enumerable {
         virtual
     {
         address owner = ownerOf(_tokenId);
-        require(_msgSender() == owner, "ERC721: caller is not the owner");
+        require(msg.sender == owner, "ERC721: caller is not the owner");
 
         require(_newBirthdate > 0, "Invalid Birthdate");
         birthdate[_tokenId] = _newBirthdate;
@@ -54,7 +54,7 @@ contract ERC721Namable is ERC721Enumerable {
     function changeName(uint256 tokenId, string memory newName) public virtual {
         address owner = ownerOf(tokenId);
 
-        require(_msgSender() == owner, "ERC721: caller is not the owner");
+        require(msg.sender == owner, "ERC721: caller is not the owner");
         require(validateName(newName), "Not a valid new name");
         require(
             sha256(bytes(newName)) != sha256(bytes(_tokenName[tokenId])),

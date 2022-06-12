@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.11;
 
-interface IBabyApesRescue {
+interface IApevolution {
     function getMonsterOwners() external view returns (address[] memory);
 
     function cloneBalance(address owner) external view returns (uint256);

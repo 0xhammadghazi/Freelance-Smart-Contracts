@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IBabyApesRescue.sol";
 
+/// @author Hammad Ghazi
 contract BananaBar is ERC20, Ownable {
     IBabyApesRescue public babyApesRescue;
 
@@ -17,14 +18,14 @@ contract BananaBar is ERC20, Ownable {
 
     // Reward rate and interval.
     uint256 public constant INTERVAL = 86400;
-    uint256 public rate = 3 ether;
-    uint256 public cloneRate = 1.5 ether;
+    uint256 public constant RATE = 3 ether;
+    uint256 public constant CLONE_RATE = 1.5 ether;
 
     // Claim steal chance for monsters
-    uint256 public stealPercentage = 20;
+    uint256 public constant STEAL_PERCENTAGE = 20;
 
     // Loss on a trade.
-    uint256 public tradeLoss = 50;
+    uint256 public constant TRADE_LOSS = 50;
 
     // The rewards for the user.
     mapping(address => uint256) public rewards;
@@ -64,21 +65,24 @@ contract BananaBar is ERC20, Ownable {
             "Reward generation is not activated yet"
         );
 
+        // Local copy to save gas
+        address caller = msg.sender;
+
         // Make a local copy of the rewards.
-        uint256 _ogRewards = rewards[_msgSender()];
-        uint256 _cloneRewards = cloneRewards[_msgSender()];
+        uint256 _ogRewards = rewards[caller];
+        uint256 _cloneRewards = cloneRewards[caller];
 
         // Get the rewards.
-        uint256 pendingOGRewards = getPendingOGReward(_msgSender());
-        uint256 pendingCloneRewards = getPendingCloneRewards(_msgSender());
+        uint256 pendingOGRewards = getPendingOGReward(caller);
+        uint256 pendingCloneRewards = getPendingCloneRewards(caller);
 
         // Reset the rewards.
-        rewards[_msgSender()] = 0;
-        cloneRewards[_msgSender()] = 0;
+        rewards[caller] = 0;
+        cloneRewards[caller] = 0;
 
         // Reset the block.
-        lastUpdate[_msgSender()] = block.timestamp;
-        lastUpdateClone[_msgSender()] = block.timestamp;
+        lastUpdate[caller] = block.timestamp;
+        lastUpdateClone[caller] = block.timestamp;
 
         // Add up the totals.
         uint256 totalRewardsWithoutMonster = _ogRewards +
@@ -97,7 +101,7 @@ contract BananaBar is ERC20, Ownable {
             monsterOwnersList = babyApesRescue.getMonsterOwners();
 
             // Cut the total amount stolen into shares for each monster.
-            uint256 rewardPerMonster = (percent * stealPercentage) /
+            uint256 rewardPerMonster = (percent * STEAL_PERCENTAGE) /
                 monsterOwnersList.length;
 
             // Give each Baby Ape Monster a cut into their stolen.
@@ -107,16 +111,16 @@ contract BananaBar is ERC20, Ownable {
         }
 
         // The final result after it was stolen from by those Baby Ape Monsters :(
-        uint256 totalRewards = (percent * (100 - stealPercentage)) +
-            monsterRewards[_msgSender()];
+        uint256 totalRewards = (percent * (100 - STEAL_PERCENTAGE)) +
+            monsterRewards[caller];
 
         // Reset monster rewards.
-        monsterRewards[_msgSender()] = 0;
+        monsterRewards[caller] = 0;
 
         // Mint the user their tokens.
-        _mint(_msgSender(), totalRewards);
+        _mint(caller, totalRewards);
 
-        emit RewardPaid(_msgSender(), totalRewards);
+        emit RewardPaid(caller, totalRewards);
     }
 
     /*
@@ -124,7 +128,7 @@ contract BananaBar is ERC20, Ownable {
     */
     function updateReward(address _from, address _to) external {
         require(
-            _msgSender() == address(babyApesRescue),
+            msg.sender == address(babyApesRescue),
             "Caller is not authorized"
         );
 
@@ -132,10 +136,10 @@ contract BananaBar is ERC20, Ownable {
         if (rewardGenerationStartTime != 0) {
             if (_from != address(0)) {
                 rewards[_from] +=
-                    (getPendingOGReward(_from) * (100 - tradeLoss)) /
+                    (getPendingOGReward(_from) * (100 - TRADE_LOSS)) /
                     100;
                 cloneRewards[_from] +=
-                    (getPendingCloneRewards(_from) * (100 - tradeLoss)) /
+                    (getPendingCloneRewards(_from) * (100 - TRADE_LOSS)) /
                     100;
                 lastUpdate[_from] = block.timestamp;
                 lastUpdateClone[_from] = block.timestamp;
@@ -152,7 +156,7 @@ contract BananaBar is ERC20, Ownable {
 
     function updateRewardOnMint(address _user) external {
         require(
-            _msgSender() == address(babyApesRescue),
+            msg.sender == address(babyApesRescue),
             "Caller is not authorized"
         );
 
@@ -167,7 +171,7 @@ contract BananaBar is ERC20, Ownable {
 
     function rewardOnMint(address _to) external {
         require(
-            _msgSender() == address(babyApesRescue),
+            msg.sender == address(babyApesRescue),
             "Caller is not authorized"
         );
         _mint(_to, OG_HOLDING_REWARAD);
@@ -175,7 +179,7 @@ contract BananaBar is ERC20, Ownable {
 
     function mintBar(address user, uint256 amount) external {
         require(
-            allowedAddresses[_msgSender()],
+            allowedAddresses[msg.sender],
             "Address does not have permission to burn"
         );
         _mint(user, amount);
@@ -183,7 +187,7 @@ contract BananaBar is ERC20, Ownable {
 
     function burn(address user, uint256 amount) external {
         require(
-            allowedAddresses[_msgSender()],
+            allowedAddresses[msg.sender],
             "Address does not have permission to burn"
         );
         _burn(user, amount);
@@ -195,11 +199,11 @@ contract BananaBar is ERC20, Ownable {
         uint256 amount
     ) external {
         require(
-            _msgSender() == address(babyApesRescue),
+            msg.sender == address(babyApesRescue),
             "Caller is not authorized"
         );
         require(
-            allowance(from, _msgSender()) >= amount,
+            allowance(from, msg.sender) >= amount,
             "Insufficient banana bar allowance"
         );
         transferFrom(from, to, amount);
@@ -260,7 +264,7 @@ contract BananaBar is ERC20, Ownable {
     function getPendingOGReward(address user) private view returns (uint256) {
         return
             (babyApesRescue.ogBalance(user) *
-                rate *
+                RATE *
                 (block.timestamp -
                     (
                         lastUpdate[user] >= rewardGenerationStartTime
@@ -276,7 +280,7 @@ contract BananaBar is ERC20, Ownable {
     {
         return
             (babyApesRescue.cloneBalance(user) *
-                cloneRate *
+                CLONE_RATE *
                 (block.timestamp -
                     (
                         lastUpdateClone[user] >= rewardGenerationStartTime

@@ -6,7 +6,8 @@ import "./ERC721Namable.sol";
 import "./interfaces/IBananaBar.sol";
 import "./interfaces/IRandom.sol";
 
-contract BabyApesRescue is ERC721Namable, Ownable {
+/// @author Hammad Ghazi
+contract Apevolution is ERC721Namable, Ownable {
     IBananaBar public bananaBar;
     IRandom public Random;
 
@@ -14,8 +15,7 @@ contract BabyApesRescue is ERC721Namable, Ownable {
     bool public maticMintOpen;
     bool public wlMintOpen;
 
-    address public constant burn =
-        address(0x0000000000000000000000000000000000000000);
+    address public constant burn = 0x0000000000000000000000000000000000000000;
 
     uint256 public constant MAX_SUPPLY = 25000;
 
@@ -23,7 +23,7 @@ contract BabyApesRescue is ERC721Namable, Ownable {
     uint256 public maxTokenIdMinted = 2500;
 
     // Mint steal chance for monsters
-    uint256 public stealPercentage = 10;
+    uint256 public constant STEAL_PERCENTAGE = 10; // 10%
 
     // Track all monster token ids that have been minted.
     uint256[] public monsterList;
@@ -45,7 +45,7 @@ contract BabyApesRescue is ERC721Namable, Ownable {
 
     uint256 public revealFee = 30 ether;
     uint256 public discountTxLimit = 1;
-    uint256 discount = 10; //10% discount
+    uint256 public constant DISCOUNT = 10; //10%
 
     string baseTokenURI;
 
@@ -63,7 +63,7 @@ contract BabyApesRescue is ERC721Namable, Ownable {
     // To store different tier prices
     mapping(uint8 => uint256) public price;
 
-    event BabyApesRescueMinted(
+    event ApevolutionMinted(
         uint256 totalMinted,
         address indexed minter,
         address indexed mintedAt,
@@ -88,21 +88,25 @@ contract BabyApesRescue is ERC721Namable, Ownable {
         baseTokenURI = baseURI;
     }
 
+    // Withdraw funds from the contract
     function withdrawAll() external onlyOwner {
-        (bool success, ) = payable(_msgSender()).call{
-            value: address(this).balance
-        }("");
+        (bool success, ) = msg.sender.call{value: address(this).balance}("");
         require(success, "Transfer failed.");
     }
 
+    // Sets the address of Banana Bar smart contract
     function setBananaBar(address _bananaBarAddress) external onlyOwner {
+        require(_bananaBarAddress != address(0), "ZERO_ADDRESS");
         bananaBar = IBananaBar(_bananaBarAddress);
     }
 
+    // Sets the address of Random generator smart contract
     function setRandom(address _randomAddress) external onlyOwner {
+        require(_randomAddress != address(0), "ZERO_ADDRESS");
         Random = IRandom(_randomAddress);
     }
 
+    // To change the price of a certain tier
     function changeTierPrice(uint8 _tier, uint256 _newTierPrice)
         external
         onlyOwner
@@ -111,6 +115,7 @@ contract BabyApesRescue is ERC721Namable, Ownable {
         price[_tier] = _newTierPrice;
     }
 
+    // To change mint fee in matic
     function changeMaticMintFree(uint256 _newMaticMintFee) external onlyOwner {
         maticMintFee = _newMaticMintFee;
     }
@@ -139,12 +144,12 @@ contract BabyApesRescue is ERC721Namable, Ownable {
         public
         override
     {
-        bananaBar.burn(_msgSender(), nameChangePrice);
+        bananaBar.burn(msg.sender, nameChangePrice);
         super.changeName(tokenId, newName);
     }
 
     function changeBio(uint256 tokenId, string memory _bio) public override {
-        bananaBar.burn(_msgSender(), bioChangePrice);
+        bananaBar.burn(msg.sender, bioChangePrice);
         super.changeBio(tokenId, _bio);
     }
 
@@ -152,7 +157,7 @@ contract BabyApesRescue is ERC721Namable, Ownable {
         public
         override
     {
-        bananaBar.burn(_msgSender(), birthdateChangePrice);
+        bananaBar.burn(msg.sender, birthdateChangePrice);
         super.changeBirthdate(tokenId, _birthdate);
     }
 
@@ -160,8 +165,8 @@ contract BabyApesRescue is ERC721Namable, Ownable {
     // your BananaBar will be burnt for nothing
     function instantReveal(uint256 id) external {
         require(id > 2500 && id <= maxTokenIdMinted, "Invalid token id");
-        require(ownerOf(id) == _msgSender(), "Caller is not the owner");
-        bananaBar.burn(_msgSender(), revealFee);
+        require(ownerOf(id) == msg.sender, "Caller is not the owner");
+        bananaBar.burn(msg.sender, revealFee);
         emit Revealed(id);
     }
 
@@ -255,6 +260,7 @@ contract BabyApesRescue is ERC721Namable, Ownable {
         }
     }
 
+    // Returns true is user can avail discount in current tx, false otherwise
     function getDiscountEligibility(address user) public view returns (bool) {
         uint256[] memory tokenIds = walletOfOwner(user);
         if (tokenIds.length > 0) {
@@ -267,6 +273,7 @@ contract BabyApesRescue is ERC721Namable, Ownable {
         return false;
     }
 
+    // Returns true if the input token id is of monster NFT
     function isMonster(uint256 _id) public view returns (bool) {
         if (_id <= 2500 || _id > maxTokenIdMinted) {
             return false;
@@ -339,13 +346,13 @@ contract BabyApesRescue is ERC721Namable, Ownable {
 
     //mint with bar
     function mint(uint256 _count) external {
-        require(_msgSender() == tx.origin, "No contract minting allowed!");
+        require(msg.sender == tx.origin, "No contract minting allowed!");
         require(
             maxTokenIdMinted + _count <= MAX_SUPPLY,
             "Transaction will exceed maximum supply"
         );
 
-        if (_msgSender() != owner()) {
+        if (msg.sender != owner()) {
             require(mintOpen, "Mint is closed");
             require(
                 _count > 0 && _count <= 10,
@@ -355,42 +362,42 @@ contract BabyApesRescue is ERC721Namable, Ownable {
             // Without discount
             uint256 totalBarBurnAmount = getBarBurnAmount(_count);
 
-            bool canAvailDiscount = getDiscountEligibility(_msgSender());
+            bool canAvailDiscount = getDiscountEligibility(msg.sender);
 
             // Calculate discount if minter is eligible
             if (canAvailDiscount) {
                 // Only calculate if the user has availed discount in less than the allowed discount transaction limit
-                if (discountAvailTxCount[_msgSender()] < discountTxLimit) {
-                    discountAvailTxCount[_msgSender()]++;
+                if (discountAvailTxCount[msg.sender] < discountTxLimit) {
+                    discountAvailTxCount[msg.sender]++;
                     // With discount
                     totalBarBurnAmount =
                         totalBarBurnAmount -
-                        (totalBarBurnAmount / discount);
+                        (totalBarBurnAmount / DISCOUNT);
                 }
             }
 
-            bananaBar.burn(_msgSender(), totalBarBurnAmount);
+            bananaBar.burn(msg.sender, totalBarBurnAmount);
         }
 
-        bananaBar.updateRewardOnMint(_msgSender());
+        bananaBar.updateRewardOnMint(msg.sender);
 
         for (uint256 i = 0; i < _count; i++) {
-            cloneMint(_msgSender(), _count);
+            cloneMint(msg.sender, _count);
         }
     }
 
     function mintMatic(uint256 _count) external payable {
-        require(_msgSender() == tx.origin, "No contract minting allowed!");
+        require(msg.sender == tx.origin, "No contract minting allowed!");
         require(
             maxTokenIdMinted + _count <= MAX_SUPPLY,
             "Transaction will exceed maximum supply"
         );
 
-        if (_msgSender() != owner()) {
+        if (msg.sender != owner()) {
             require(maticMintOpen, "Minting will matic is not allowed");
             if (wlMintOpen) {
                 require(
-                    isWhitelisted[_msgSender()],
+                    isWhitelisted[msg.sender],
                     "Matic mint only open for WL users"
                 );
             }
@@ -406,10 +413,10 @@ contract BabyApesRescue is ERC721Namable, Ownable {
 
         maticMintCount += _count;
 
-        bananaBar.updateRewardOnMint(_msgSender());
+        bananaBar.updateRewardOnMint(msg.sender);
 
         for (uint256 i = 0; i < _count; i++) {
-            handleMint(_msgSender(), false);
+            handleMint(msg.sender, false);
         }
     }
 
@@ -417,10 +424,10 @@ contract BabyApesRescue is ERC721Namable, Ownable {
         bool isSteal;
 
         // Determine if it was stolen, give it to the monster owner.
-        if (Random.canSteal(_count, stealPercentage)) {
+        if (Random.canSteal(_count, STEAL_PERCENTAGE)) {
             uint256 monsterId = Random.getMonsterId(
                 monsterList,
-                stealPercentage,
+                STEAL_PERCENTAGE,
                 _count
             );
 
@@ -435,8 +442,8 @@ contract BabyApesRescue is ERC721Namable, Ownable {
     }
 
     function handleMint(address _to, bool isSteal) private {
-        if (_to != _msgSender()) {
-            bananaBar.updateRewardOnMint(_msgSender());
+        if (_to != msg.sender) {
+            bananaBar.updateRewardOnMint(msg.sender);
         }
 
         maxTokenIdMinted++;
@@ -451,7 +458,7 @@ contract BabyApesRescue is ERC721Namable, Ownable {
             cloneBalance[_to]++;
         }
         _safeMint(_to, maxTokenIdMinted);
-        emit BabyApesRescueMinted(maxTokenIdMinted, _msgSender(), _to, isSteal);
+        emit ApevolutionMinted(maxTokenIdMinted, msg.sender, _to, isSteal);
     }
 
     // Tip a baby ape
@@ -459,9 +466,9 @@ contract BabyApesRescue is ERC721Namable, Ownable {
     function tipBabyApeHolder(uint256 _tokenId, uint256 _amount) external {
         require(_exists(_tokenId), "Invalid token id");
         address _to = ownerOf(_tokenId);
-        require(_to != _msgSender(), "Can not tip own address");
-        bananaBar._tipBabyApeHolder(_msgSender(), _to, _amount);
-        emit Tipped(_msgSender(), _to, _amount);
+        require(_to != msg.sender, "Can not tip own address");
+        bananaBar._tipBabyApeHolder(msg.sender, _to, _amount);
+        emit Tipped(msg.sender, _to, _amount);
     }
 
     // Transfer functions
