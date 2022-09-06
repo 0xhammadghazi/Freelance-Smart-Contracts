@@ -576,18 +576,25 @@ library SafeERC20 {
     }
 }
 
+//SPDX-License-Identifier: MITs
 pragma solidity 0.8.15;
 
-// Custom errors
+// Definition of custom errors
 error DuplicateToken();
 error InsufficientPayment();
+error InsufficientFunds();
 error TransactionFailed();
 error ZeroAddress();
 error ZeroInput();
 
+/// @title SmartSync
+/// @author @hammadghazi
+/// @notice Contract for receiving and sending payments of smartsync meetings
 contract SmartSync is Ownable {
+    // Just incase if we decide to accept token which is not fully ERC-20 compliant.
     using SafeERC20 for IERC20;
 
+    // Address of the token that is accepted as a payment
     IERC20 public token;
 
     event PaymentSuccessful(
@@ -608,17 +615,35 @@ contract SmartSync is Ownable {
         bool isNativePay
     );
 
+    /**
+     * @notice Constructor
+     * @param _tokenAddress address of the token address that is accepted as a payment
+     */
     constructor(IERC20 _tokenAddress) {
-        if (address(0) == address(_tokenAddress)) revert ZeroAddress();
+        // Set zero address if only want to accept matic at the time of deployment
         token = _tokenAddress;
     }
 
+    /**
+     * @notice Changes the token address
+     * @param _tokenAddress address of the new token to be accepted as payment
+     * @dev Only callable by Owner
+     */
     function changeTokenAddress(IERC20 _tokenAddress) external onlyOwner {
         if (address(0) == address(_tokenAddress)) revert ZeroAddress();
         if (_tokenAddress == token) revert DuplicateToken();
         token = _tokenAddress;
     }
 
+    /**
+     * @notice Receives payment.
+     * @param _payee address of the recipient
+     * @param _userId id of the user that created the meeting
+     * @param _meetingId id of the meeting for which payment is being made
+     * @param _amountInUsd bill of the meeting in usd
+     * @param _amountInNativeOrToken number of tokens or native currency to be paid
+     * @param _isNativePay whether the payment is in native currency or in tokens
+     */
     function receivePayment(
         address _payee,
         uint256 _userId,
@@ -654,6 +679,15 @@ contract SmartSync is Ownable {
         );
     }
 
+    /**
+     * @notice Sends payment.
+     * @param _hostAddress address of the recipient
+     * @param _totalAmount amount to pay to recipient
+     * @param _userIds list of user ids that created the meeting
+     * @param _meetingIds list of meeting ids for which payment was made
+     * @param _isNativePay whether to pay in native currency or in tokens
+     * @dev Only callable by the Owner.
+     */
     function sendPayment(
         address _hostAddress,
         uint256 _totalAmount,
@@ -663,13 +697,18 @@ contract SmartSync is Ownable {
     ) external onlyOwner {
         if (_totalAmount == 0) revert ZeroInput();
 
+        // If sending matic
         if (_isNativePay) {
+            if (_totalAmount > address(this).balance)
+                revert InsufficientFunds();
             (bool success, ) = payable(_hostAddress).call{value: _totalAmount}(
                 ""
             );
 
             if (!success) revert TransactionFailed();
-        } else {
+        }
+        // Otherwise, if sending tokens
+        else {
             token.safeTransfer(_hostAddress, _totalAmount);
         }
 
