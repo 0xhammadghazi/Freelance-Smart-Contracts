@@ -588,7 +588,7 @@ error ZeroAddress();
 error ZeroInput();
 
 /// @title SmartSync
-/// @author @hammadghazi
+/// @author SmartSync
 /// @notice Contract for receiving and sending payments of smartsync meetings
 contract SmartSync is Ownable {
     // Just incase if we decide to accept token which is not fully ERC-20 compliant.
