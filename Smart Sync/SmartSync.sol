@@ -576,11 +576,11 @@ library SafeERC20 {
     }
 }
 
-//SPDX-License-Identifier: MITs
 pragma solidity 0.8.15;
 
 // Definition of custom errors
-error DuplicateToken();
+error Duplicate();
+error GreaterThan100();
 error InsufficientPayment();
 error InsufficientFunds();
 error TransactionFailed();
@@ -597,6 +597,21 @@ contract SmartSync is Ownable {
     // Address of the token that is accepted as a payment
     IERC20 public token;
 
+    address public feeRecipient;
+    uint96 public feePercentage; // uint96 so it can get packed with address data type
+
+    uint256 public constant PERCENTAGE_PRECISION = 100e18;
+
+    event TokenChanged(IERC20 oldToken, IERC20 newToken);
+    event FeeRecipientChanged(
+        address indexed oldRecipient,
+        address indexed newRecipient
+    );
+    event FeePercentageChanged(
+        uint96 oldFeePercentage,
+        uint96 newFeePercentage
+    );
+
     event PaymentSuccessful(
         address indexed payer,
         address indexed payee,
@@ -612,7 +627,9 @@ contract SmartSync is Ownable {
         uint256 totalAmount,
         uint256[] userIds,
         string[] meetingIds,
-        bool isNativePay
+        bool isNativePay,
+        uint256 amountAfterFee,
+        uint256 feeAmoount
     );
 
     /**
@@ -622,6 +639,11 @@ contract SmartSync is Ownable {
     constructor(IERC20 _tokenAddress) {
         // Set zero address if only want to accept matic at the time of deployment
         token = _tokenAddress;
+
+        // Setting admin address as a fee recipient
+        feeRecipient = msg.sender;
+
+        feePercentage = 5e18; // 5%
     }
 
     /**
@@ -631,8 +653,33 @@ contract SmartSync is Ownable {
      */
     function changeTokenAddress(IERC20 _tokenAddress) external onlyOwner {
         if (address(0) == address(_tokenAddress)) revert ZeroAddress();
-        if (_tokenAddress == token) revert DuplicateToken();
+        if (_tokenAddress == token) revert Duplicate();
+        emit TokenChanged(token, _tokenAddress);
         token = _tokenAddress;
+    }
+
+    /**
+     * @notice Changes the fee recipient address
+     * @param _newFeeRecipient address of the new fee recipient
+     * @dev Only callable by Owner
+     */
+    function changeFeeRecipient(address _newFeeRecipient) external onlyOwner {
+        if (address(0) == _newFeeRecipient) revert ZeroAddress();
+        if (feeRecipient == _newFeeRecipient) revert Duplicate();
+        emit FeeRecipientChanged(feeRecipient, _newFeeRecipient);
+        feeRecipient = _newFeeRecipient;
+    }
+
+    /**
+     * @notice Changes the fee percentage. 1e18 represents 1%
+     * @param _newFeePercentage new fee percentage
+     * @dev Only callable by Owner
+     */
+    function changeFeePercentage(uint96 _newFeePercentage) external onlyOwner {
+        if (feePercentage == _newFeePercentage) revert Duplicate();
+        if (feePercentage <= 100e18) revert GreaterThan100();
+        emit FeePercentageChanged(feePercentage, _newFeePercentage);
+        feePercentage = _newFeePercentage;
     }
 
     /**
@@ -697,19 +744,33 @@ contract SmartSync is Ownable {
     ) external onlyOwner {
         if (_totalAmount == 0) revert ZeroInput();
 
+        uint256 feeAmount = (_totalAmount * feePercentage) /
+            PERCENTAGE_PRECISION;
         // If sending matic
         if (_isNativePay) {
             if (_totalAmount > address(this).balance)
                 revert InsufficientFunds();
-            (bool success, ) = payable(_hostAddress).call{value: _totalAmount}(
-                ""
-            );
 
-            if (!success) revert TransactionFailed();
+            (bool success1, ) = payable(_hostAddress).call{
+                value: _totalAmount - feeAmount
+            }("");
+
+            if (!success1) revert TransactionFailed();
+
+            if (feeAmount != 0) {
+                (bool success2, ) = payable(feeRecipient).call{
+                    value: feeAmount
+                }("");
+
+                if (!success2) revert TransactionFailed();
+            }
         }
         // Otherwise, if sending tokens
         else {
-            token.safeTransfer(_hostAddress, _totalAmount);
+            token.safeTransfer(_hostAddress, _totalAmount - feeAmount);
+            if (feeAmount != 0) {
+                token.safeTransfer(feeRecipient, feeAmount);
+            }
         }
 
         emit Paid(
@@ -717,7 +778,9 @@ contract SmartSync is Ownable {
             _totalAmount,
             _userIds,
             _meetingIds,
-            _isNativePay
+            _isNativePay,
+            _totalAmount - feeAmount,
+            feeAmount
         );
     }
 }
