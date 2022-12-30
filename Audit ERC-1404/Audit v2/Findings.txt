@@ -1,0 +1,14 @@
+
+7. in constructor use message.sender instead of Ownable.owner()? or even better store msg.sender in a memory var and use it.
+9. use msg.sender instead of _msgSender()
+10. no need of ==true in onlyWhitelist.
+11. Ownable.onlyOwner? why not onlyOwner modifier?
+13. instead of ERC20.balanceOf we can simply use balanceOf, no? > 0 condition is better than == 0, no?
+14. currentTotalInvestors ++ instead of currentTotalInvestors = currentTotalInvestors + 1;?
+19. delete or false in whitelistControlAuthoriy? Also, maybe having just one fn to give/ revoke whitelist access instead of having multiple fns?
+20. no check in send/ receive restriction value?
+23. Uunchecked ++i to save gas. Store account.legngth in local var.
+24. value ==0 or value < 1 check in detectTransferRestriction
+25. what if from/ to is an owner in transfer fn?
+26. transfer/ transferFrom events?
+27. transferFrom by original owner
