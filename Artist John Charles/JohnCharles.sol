@@ -72,7 +72,7 @@ contract ArtistJohnCharles is OperatorFilterer, Ownable, ERC2981, ERC721 {
             revert ZeroInput();
         }
 
-        uint256 supply = totalSupply();
+        uint256 supply = currentSupply;
 
         if (supply + quantity > maxSupply) {
             revert ExceedsMaximumSupply(supply + quantity);

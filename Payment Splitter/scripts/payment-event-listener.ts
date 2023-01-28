@@ -1,5 +1,6 @@
 import { ethers } from 'hardhat';
 import hre from 'hardhat';
+import { ETHWithdraw  } from './withdraw-helpers';
 
 async function main() {
   // get signer wallet
@@ -12,16 +13,14 @@ async function main() {
     signer
   );
 
-  console.log('listening to events on ' + PaymentSplitter.address + ' on network ' + hre.network.name);
+  console.log('> First check contract balance and withdraw if any.');
+  await ETHWithdraw(PaymentSplitter);
+
   // listen on Received event
-  PaymentSplitter.on('Received', (from: string, amount: string) => {
-    console.log(`Received ${amount} from ${from}`);
-
-    const tx = PaymentSplitter.withdraw();
-
-    tx.then((tx) => {
-      console.log('Withdraw tx:', tx.hash);
-    });
+  console.log('> Listening to events on ' + PaymentSplitter.address + ' on network ' + hre.network.name + '...');
+  PaymentSplitter.on('Received', async (from: string, amount: string) => {
+    console.log(`Received ${ethers.utils.formatEther(amount)} ETH from ${from}`);
+    await ETHWithdraw(PaymentSplitter);
   });
 }
 

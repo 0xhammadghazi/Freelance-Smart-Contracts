@@ -1,4 +1,5 @@
 import { ethers } from 'hardhat';
+import { fullWithdraw } from './withdraw-helpers';
 
 async function main() {
   // get signer wallet
@@ -11,17 +12,7 @@ async function main() {
     signer
   );
 
-  console.log('listening to events on ' + PaymentSplitter.address);
-  // listen on Received event
-  PaymentSplitter.on('Received', (from: string, amount: string) => {
-    console.log(`Received ${amount} from ${from}`);
-
-    const tx = PaymentSplitter.withdraw();
-
-    tx.then((tx) => {
-      console.log('withdraw tx:', tx.hash);
-    });
-  });
+  await fullWithdraw(PaymentSplitter);
 }
 
 main().catch((error) => {
