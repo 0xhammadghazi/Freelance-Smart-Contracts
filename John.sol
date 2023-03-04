@@ -48,22 +48,24 @@ pragma solidity 0.8.15;
 
 /// @title Contract for receiving ether
 contract John is Owned {
-    event Received(address from, uint256 amount);
-    event Withdraw(address to, uint256 amount);
+    // Events
+    event Received(address indexed from, uint256 indexed amount);
+    event Withdraw(address indexed to, uint256 indexed amount);
 
+    // Custom Errors
     error NoBalance();
     error PaymentFailed();
     error ZeroAddress();
 
     /**
      * @dev Constructor function.
-     * @param owner_ address of the owner of the contract.
+     * @param owner_ address of the smart contract owner.
      *
      * Requires:
      * - owner_ should not be a null address.
      */
-    constructor() {
-        owner = owner_;
+    constructor(address owner_) Owned(owner_){
+           if (owner_ == address(0)) revert ZeroAddress();
     }
 
     /// @dev The Ether received will be logged with {Received} events.
@@ -79,15 +81,15 @@ contract John is Owned {
      * - balance of the contract must be greater than zero.
      * - recipient should not be a null address.
      */
-    function withdraw(address recipient) external {
+    function withdraw(address recipient) external onlyOwner {
         if (recipient == address(0)) revert ZeroAddress();
         uint256 balance = address(this).balance;
 
         if (balance == 0) revert NoBalance();
 
-        (bool success1, ) = recipient.call{value: balance}("");
+        (bool success, ) = recipient.call{value: balance}("");
 
-        if (!success1) revert PaymentFailed();
+        if (!success) revert PaymentFailed();
 
         emit Withdraw(recipient, balance);
     }
